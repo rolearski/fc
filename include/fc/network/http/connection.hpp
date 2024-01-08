@@ -63,7 +63,7 @@ namespace fc {
          ~connection();
          // used for clients
          void         connect_to( const fc::ip::endpoint& ep );
-         http::reply  request( const std::string& method, const std::string& url, const std::string& body = std::string(), const headers& = headers());
+         http::reply  request( const std::string& method, const std::string& url, const std::string& body = std::string(), const headers& = headers(), const std::string& content_type = "application/json");
      
          // used for servers
          fc::tcp_socket& get_socket()const;

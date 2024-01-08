@@ -49,6 +49,8 @@ namespace fc {
       ovariant_object           args()const;
       fc::optional<uint16_t>    port()const;
 
+      std::string args_to_string() const;
+
     private:
       friend class mutable_url;
       std::shared_ptr<detail::url_impl> my;
@@ -96,10 +98,10 @@ namespace fc {
       void set_args( variant_object );
       void set_port( uint16_t       );
 
+
     private:
       friend class url;
       std::unique_ptr<detail::url_impl> my;
   };
-
 } // namespace fc
 

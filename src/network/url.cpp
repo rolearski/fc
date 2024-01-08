@@ -192,6 +192,21 @@ namespace fc
     return my->_port;
   }
 
+  std::string url::args_to_string() const
+  {
+    std::ostringstream ss;
+    if( my->_args ) 
+    {
+      bool first = true;
+      for (auto iter = my->_args->begin(); iter != my->_args->end(); ++iter)
+      {
+        ss << (first ? "?" : "&");
+        first = false;
+        ss << iter->key() << "=" << iter->value().as_string();
+      }
+    }
+    return ss.str();
+  }
 
 
 }

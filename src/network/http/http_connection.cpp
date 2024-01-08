@@ -90,7 +90,7 @@ void       connection::connect_to( const fc::ip::endpoint& ep ) {
 
 http::reply connection::request( const std::string& method, 
                                 const std::string& url, 
-                                const std::string& body, const headers& he ) {
+                                const std::string& body, const headers& he,  const std::string& content_type  ) {
 	
   fc::url parsed_url(url);
   if( !my->sock.is_open() ) {
@@ -99,9 +99,18 @@ http::reply connection::request( const std::string& method,
   }
   try {
       fc::stringstream req;
-      req << method <<" "<<parsed_url.path()->generic_string()<<" HTTP/1.1\r\n";
-      req << "Host: "<<*parsed_url.host()<<"\r\n";
-      req << "Content-Type: application/json\r\n";
+      req << method << " " << parsed_url.path()->generic_string() << parsed_url.args_to_string() << " HTTP/1.1\r\n";
+      //req << method <<" "<<parsed_url.path()->generic_string()<<" HTTP/1.1\r\n";
+
+      req << "Host: " << *parsed_url.host();
+      if(parsed_url.port())
+        req << ":" << *parsed_url.port();
+      req<< "\r\n";
+      //req << "Host: "<<*parsed_url.host()<<"\r\n";
+
+      if( body.size() ) 
+        req << "Content-Type: " << content_type << "\r\n";
+      //req << "Content-Type: application/json\r\n";
       for( auto i = he.begin(); i != he.end(); ++i )
       {
           req << i->key <<": " << i->val<<"\r\n";

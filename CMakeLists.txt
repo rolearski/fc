@@ -4,6 +4,8 @@
 CMAKE_MINIMUM_REQUIRED( VERSION 3.2 FATAL_ERROR )
 PROJECT( fc )
 
+add_definitions( -DBOOST_BIND_GLOBAL_PLACEHOLDERS )
+
 set( CMAKE_CXX_STANDARD 14 )
 SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 
@@ -22,7 +24,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 
 INCLUDE(GetPrerequisites)
 INCLUDE(GetGitRevisionDescription)
-INCLUDE(CheckLibraryExists)
+# OLEK INCLUDE(CheckLibraryExists)
 
 get_git_head_revision(GIT_REFSPEC FC_GIT_REVISION_SHA)
 get_git_unix_timestamp(FC_GIT_REVISION_UNIX_TIMESTAMP)
@@ -38,13 +40,16 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(platformBitness 64)
 endif()
 
+# OLEK
+SET (ORIGINAL_LIB_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+
 SET(BOOST_COMPONENTS)
 LIST(APPEND BOOST_COMPONENTS coroutine thread date_time filesystem system program_options chrono unit_test_framework context iostreams regex)
 # boost::endian is also required, but FindBoost can't handle header-only libs
 SET( Boost_USE_STATIC_LIBS ON CACHE STRING "ON or OFF" )
 
 # Configure secp256k1-zkp
-if ( WIN32 )
+if ( MSVC )
     # autoconf won't work here, hard code the defines
     set( SECP256K1_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/secp256k1-zkp" )
 
@@ -60,9 +65,8 @@ if ( WIN32 )
         USE_SCALAR_8X32
         USE_SCALAR_INV_BUILTIN )
     set_target_properties( secp256k1 PROPERTIES COMPILE_DEFINITIONS "${SECP256K1_BUILD_DEFINES}" LINKER_LANGUAGE C )
-else ( WIN32 )
+else ( MSVC )
     include(ExternalProject)
-
     ExternalProject_Add( project_secp256k1
      PREFIX ${CMAKE_CURRENT_BINARY_DIR}/vendor/secp256k1-zkp
      SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/secp256k1-zkp
@@ -85,11 +89,21 @@ else ( WIN32 )
     set_property(TARGET secp256k1 PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/vendor/secp256k1-zkp/include)
     add_dependencies(secp256k1 project_secp256k1)
     install( FILES ${binary_dir}/.libs/libsecp256k1${CMAKE_STATIC_LIBRARY_SUFFIX} DESTINATION lib/cryptonomex )
-endif ( WIN32 )
+endif ( MSVC )
 # End configure secp256k1-zkp
 
 # Configure editline
-if ( NOT WIN32 )
+if ( MSVC )
+#    # autoconf won't work here, hard code the defines
+#    set( EDITLINE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/editline" )
+#
+#    file( GLOB EDITLINE_SOURCES "${EDITLINE_DIR}/src/editline.c" )
+#    add_library( editline ${EDITLINE_SOURCES} )
+#
+#    target_include_directories( editline PRIVATE "${EDITLINE_DIR}" PUBLIC "${EDITLINE_DIR}/include" )
+#
+#    set_target_properties( editline PROPERTIES COMPILE_DEFINITIONS LINKER_LANGUAGE C )
+else ( MSVC )
     include(ExternalProject)
 
     ExternalProject_Add( project_editline
@@ -112,7 +126,7 @@ if ( NOT WIN32 )
     set_property(TARGET editline PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/vendor/editline/include)
     add_dependencies(editline project_editline)
     install( FILES ${binary_dir}/src/.libs/libeditline${CMAKE_STATIC_LIBRARY_SUFFIX} DESTINATION lib/cryptonomex )
-endif ( NOT WIN32 )
+endif ( MSVC )
 # End configure editline
 
 IF( WIN32 )
@@ -151,11 +165,15 @@ IF($ENV{OPENSSL_ROOT_DIR})
   message(STATUS "Setting up OpenSSL root and include vars to ${OPENSSL_ROOT_DIR}, ${OPENSSL_INCLUDE_DIR}")
 ENDIF()
 
-IF( LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB )
-    LIST( APPEND PLATFORM_SPECIFIC_LIBS atomic )
-ENDIF( LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB )
+# OLEK IF( LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB )
+# OLEK   LIST( APPEND PLATFORM_SPECIFIC_LIBS atomic )
+# OLEK ENDIF( LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB )
 
 find_package(OpenSSL REQUIRED)
+
+set( CMAKE_FIND_LIBRARY_SUFFIXES ${ORIGINAL_LIB_SUFFIXES} )
+
+option( UNITY_BUILD OFF )
 
 set( fc_sources
      src/popcount.cpp
@@ -240,15 +258,18 @@ list(APPEND sources ${fc_headers})
 
 add_subdirectory( vendor/websocketpp EXCLUDE_FROM_ALL )
 
-add_library( fc ${sources} )
+# OLEK 
+add_library( fc ${sources})
+# OLEK setup_library( fc SOURCES ${sources} LIBRARY_TYPE STATIC )
 install( DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION include )
 
 # begin editline stuff
+if(NOT MSVC)
+  target_compile_definitions (fc PRIVATE HAVE_EDITLINE)
+  set(editline_libraries editline)
+endif(NOT MSVC)
 if(WIN32)
   target_compile_definitions( fc PRIVATE _CRT_NONSTDC_NO_DEPRECATE )
-else(WIN32)
-  target_compile_definitions( fc PRIVATE HAVE_EDITLINE )
-  set( editline_libraries editline )
 endif(WIN32)
 # end editline stuff
 
@@ -344,14 +365,15 @@ target_link_libraries( fc PUBLIC ${LINK_USR_LOCAL_LIB}  ${OPENSSL_LIBRARIES} ${Z
                                  ${PLATFORM_SPECIFIC_LIBS} ${RPCRT4} ${CMAKE_DL_LIBS} ${rt_library}
                                  ${editline_libraries} secp256k1 ${CMAKE_REQUIRED_LIBRARIES} )
 
-if(WIN32 AND MSVC)
-    set_source_files_properties( src/network/http/websocket.cpp PROPERTIES COMPILE_FLAGS "/bigobj" )
-elseif(WIN32 AND MINGW)
-    set_source_files_properties( src/network/http/websocket.cpp PROPERTIES LINK_FLAGS "-mbig-obj" )
-endif()
+if(MSVC)
+  set_source_files_properties( src/network/http/websocket.cpp PROPERTIES COMPILE_FLAGS "/bigobj" )
+endif(MSVC)
 
 
+# OLEK 
 IF(Boost_UNIT_TEST_FRAMEWORK_LIBRARY MATCHES "\\.(so|dll)$")
+# OLEK IF(NOT Boost_UNIT_TEST_FRAMEWORK_LIBRARY MATCHES "\\.(a|lib)$")
+MESSAGE(STATUS "!!!!!!!! DBOOST_TEST_DYN_LINK")
 IF(MSVC)
 add_definitions(/DBOOST_TEST_DYN_LINK)
 ELSE(MSVC)
@@ -363,7 +385,7 @@ include_directories( vendor/websocketpp )
 
 add_subdirectory(tests)
 
-if(MSVC)
+if(WIN32)
    # add addtional import library on windows platform
    target_link_libraries( fc PUBLIC crypt32.lib)
 
@@ -435,8 +457,8 @@ if(MSVC)
    set_property(TARGET fc PROPERTY SHARED_LIBRARIES_DEBUG ${SHARED_LIBRARIES_DEBUG})
    set_property(TARGET fc PROPERTY SHARED_LIBRARIES_RELEASE ${SHARED_LIBRARIES_RELEASE})
 
-endif(MSVC)
+endif(WIN32)
 
-INCLUDE(CheckLibcxxAtomic)
+# OLEK INCLUDE(CheckLibcxxAtomic)
 
 MESSAGE(STATUS "Finished fc module configuration...")
