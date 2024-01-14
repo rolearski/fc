@@ -40,7 +40,6 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(platformBitness 64)
 endif()
 
-# OLEK
 SET (ORIGINAL_LIB_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
 SET(BOOST_COMPONENTS)
@@ -258,10 +257,10 @@ list(APPEND sources ${fc_headers})
 
 add_subdirectory( vendor/websocketpp EXCLUDE_FROM_ALL )
 
-# OLEK 
 add_library( fc ${sources})
-# OLEK setup_library( fc SOURCES ${sources} LIBRARY_TYPE STATIC )
 install( DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION include )
+install( FILES libfc${CMAKE_DEBUG_POSTFIX}${CMAKE_STATIC_LIBRARY_SUFFIX} DESTINATION lib )
+
 
 # begin editline stuff
 if(NOT MSVC)
@@ -370,7 +369,6 @@ if(MSVC)
 endif(MSVC)
 
 
-# OLEK 
 IF(Boost_UNIT_TEST_FRAMEWORK_LIBRARY MATCHES "\\.(so|dll)$")
 # OLEK IF(NOT Boost_UNIT_TEST_FRAMEWORK_LIBRARY MATCHES "\\.(a|lib)$")
 MESSAGE(STATUS "!!!!!!!! DBOOST_TEST_DYN_LINK")
@@ -383,7 +381,9 @@ ENDIF()
 
 include_directories( vendor/websocketpp )
 
+if(NOT SKIP_TESTS)
 add_subdirectory(tests)
+ENDIF(SKIP_TESTS)
 
 if(WIN32)
    # add addtional import library on windows platform
@@ -458,7 +458,5 @@ if(WIN32)
    set_property(TARGET fc PROPERTY SHARED_LIBRARIES_RELEASE ${SHARED_LIBRARIES_RELEASE})
 
 endif(WIN32)
-
-# OLEK INCLUDE(CheckLibcxxAtomic)
 
 MESSAGE(STATUS "Finished fc module configuration...")
