@@ -147,8 +147,9 @@ namespace fc {
       void on_complete( CompletionHandler&& c ) {
         _on_complete( new detail::completion_handler_impl<CompletionHandler,T>(std::forward<CompletionHandler>(c)) );
       }
-    protected:
       promise( const char* desc ):promise_base(desc){}
+    protected:
+      //promise( const char* desc ):promise_base(desc){}
       promise( const T& val ){ set_value(val); }
       promise( T&& val ){ set_value(std::move(val) ); }
 
@@ -185,8 +186,9 @@ namespace fc {
       void on_complete( CompletionHandler&& c ) {
         _on_complete( new detail::completion_handler_impl<CompletionHandler,void>(std::forward<CompletionHandler>(c)) );
       }
-    protected:
       promise( const char* desc ):promise_base(desc){}
+    protected:
+      //promise( const char* desc ):promise_base(desc){}
       promise( bool fulfilled, const char* desc ){
           if( fulfilled ) set_value();
       }
